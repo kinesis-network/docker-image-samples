@@ -5,4 +5,8 @@ COPY . .
 RUN ./compile.sh \
   && rm Makefile ./compile.sh
 
-CMD ["./bin/t", "-d"]
+# Default environment variables (optional)
+ENV DAEMON_MODE=1
+ENV MATRIX_SIZE=
+
+CMD ["sh", "./entrypoint.sh"]
