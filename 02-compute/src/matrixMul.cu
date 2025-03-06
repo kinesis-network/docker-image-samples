@@ -40,8 +40,11 @@
  */
 
 // System includes
-#include <stdio.h>
-#include <assert.h>
+#include <cassert>
+#include <csignal>
+#include <cstdio>
+#include <chrono>
+#include <thread>
 
 // CUDA runtime
 #include <cuda_runtime.h>
@@ -50,6 +53,16 @@
 // Helper functions and utilities to work with CUDA
 #include <helper_functions.h>
 #include <helper_cuda.h>
+
+// Global variables
+const auto kSleepInterval = std::chrono::seconds(1);
+bool exit_program = false;
+
+// Signal handler for Ctrl+C (SIGINT)
+void handle_signal(int) {
+  printf("Received SIGINT\n");
+  exit_program = true;
+}
 
 /**
  * Matrix multiplication (CUDA Kernel) on the device: C = A * B
@@ -191,7 +204,7 @@ int MatrixMultiply(int argc, char **argv,
   dim3 grid(dimsB.x / threads.x, dimsA.y / threads.y);
 
   // Create and start timer
-  printf("Computing result using CUDA Kernel...\n");
+  printf("Performing warmup operation using CUDA kernel...\n");
 
   // Performs warmup operation using matrixMul CUDA kernel
   if (block_size == 16) {
@@ -202,7 +215,6 @@ int MatrixMultiply(int argc, char **argv,
         <<<grid, threads, 0, stream>>>(d_C, d_A, d_B, dimsA.x, dimsB.x);
   }
 
-  printf("done\n");
   checkCudaErrors(cudaStreamSynchronize(stream));
 
   // Record the start event
@@ -210,6 +222,7 @@ int MatrixMultiply(int argc, char **argv,
 
   // Execute the kernel
   int nIter = 300;
+  printf("Executing the CUDA kernel (nIter=%d)...\n", nIter);
 
   for (int j = 0; j < nIter; j++) {
     if (block_size == 16) {
@@ -289,24 +302,10 @@ int MatrixMultiply(int argc, char **argv,
   }
 }
 
-
 /**
  * Program main
  */
-int main(int argc, char **argv) {
-  printf("[Matrix Multiply Using CUDA] - Starting...\n");
-
-  if (checkCmdLineFlag(argc, (const char **)argv, "help") ||
-      checkCmdLineFlag(argc, (const char **)argv, "?")) {
-    printf("Usage -device=n (n >= 0 for deviceID)\n");
-    printf("      -wA=WidthA -hA=HeightA (Width x Height of Matrix A)\n");
-    printf("      -wB=WidthB -hB=HeightB (Width x Height of Matrix B)\n");
-    printf("  Note: Outer matrix dimensions of A & B matrices" \
-           " must be equal.\n");
-
-    exit(EXIT_SUCCESS);
-  }
-
+int main_core(int argc, char **argv) {
   // This will pick the best possible CUDA capable device, otherwise
   // override the device ID based on input provided at the command line
   int dev = findCudaDevice(argc, (const char **)argv);
@@ -339,7 +338,7 @@ int main(int argc, char **argv) {
   if (dimsA.x != dimsB.y) {
     printf("Error: outer matrix dimensions must be equal. (%d != %d)\n",
            dimsA.x, dimsB.y);
-    exit(EXIT_FAILURE);
+    return EXIT_FAILURE;
   }
 
   printf("MatrixA(%d,%d), MatrixB(%d,%d)\n", dimsA.x, dimsA.y,
@@ -349,5 +348,34 @@ int main(int argc, char **argv) {
   int matrix_result = MatrixMultiply(argc, argv, block_size, dimsA, dimsB);
   checkCudaErrors(cudaProfilerStop());
 
-  exit(matrix_result);
+  return matrix_result;
 }
+
+int main(int argc, char **argv) {
+  printf("[Matrix Multiply Using CUDA] - Starting...\n");
+
+  if (checkCmdLineFlag(argc, (const char **)argv, "help") ||
+      checkCmdLineFlag(argc, (const char **)argv, "?")) {
+    printf("Usage -d (daemon mode)\n");
+    printf("      -device=n (n >= 0 for deviceID)\n");
+    printf("      -wA=WidthA -hA=HeightA (Width x Height of Matrix A)\n");
+    printf("      -wB=WidthB -hB=HeightB (Width x Height of Matrix B)\n");
+    printf("  Note: Outer matrix dimensions of A & B matrices" \
+           " must be equal.\n");
+
+    return EXIT_SUCCESS;
+  }
+
+  if (checkCmdLineFlag(argc, (const char **)argv, "-d")) {
+    std::signal(SIGINT, handle_signal);
+    int last_ret = 0;
+    while (!exit_program) {
+      last_ret = main_core(argc, argv);
+      std::this_thread::sleep_for(kSleepInterval);
+    }
+    return last_ret;
+  }
+
+  return main_core(argc, argv);
+}
+
