@@ -2,13 +2,13 @@ OUTDIR=bin
 OBJDIR=obj
 SRCDIR=src
 
-CC=g++
+CC=nvcc
 RM=rm
-LINKER=g++
+LINKER=nvcc
 TARGET=t
 
-SRCS=$(wildcard $(SRCDIR)/*.cpp)
-OBJS=$(addprefix $(OBJDIR)/, $(notdir $(SRCS:.cpp=.o)))
+SRCS=$(wildcard $(SRCDIR)/*.cu)
+OBJS=$(addprefix $(OBJDIR)/, $(notdir $(SRCS:.cu=.o)))
 
 LIBS=\
 	-lpthread\
@@ -16,15 +16,15 @@ LIBS=\
 CFLAGS=\
 	-c\
 	-O0\
-	-Wall\
 	-g\
 	-std=c++17\
+	-I$(SRCDIR)\
 
 LFLAGS=\
 
 all: $(OUTDIR)/$(TARGET)
 
-$(OBJDIR)/%.o: $(SRCDIR)/%.cpp
+$(OBJDIR)/%.o: $(SRCDIR)/%.cu
 	@[ -d $(OBJDIR) ] || mkdir -p $(OBJDIR)
 	$(CC) $(CFLAGS) -o $@ -c $<
 
