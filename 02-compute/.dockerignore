@@ -1,0 +1,4 @@
+obj/
+bin/
+build_and_run.sh
+Dockerfile
