@@ -1,5 +1,5 @@
 #!/bin/sh
-CMD=/app/bin/t
+CMD=/app/0_Introduction/matrixMul/matrixMul
 
 if [ -n "${DAEMON_MODE}" ]; then
   CMD="$CMD -d"
