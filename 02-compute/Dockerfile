@@ -1,7 +1,7 @@
 FROM nvidia/cuda:12.9.0-cudnn-devel-ubuntu24.04 AS build
 WORKDIR /build
 RUN apt update && apt install git cmake -y
-RUN git clone https://github.com/NVIDIA/cuda-samples -b master
+RUN git clone https://github.com/NVIDIA/cuda-samples -b v12.9
 
 COPY src/matrixMul.cu cuda-samples/Samples/0_Introduction/matrixMul/
 RUN mkdir cuda-samples/build \
