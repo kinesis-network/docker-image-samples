@@ -10,7 +10,7 @@ import (
 
 var (
 	mode *string = flag.String("mode", "s", "[s]erver or [c]lient")
-	addr *string = flag.String("addr", "localhost:9000", "http endpoint")
+	addr *string = flag.String("addr", "0.0.0.0:9000", "http endpoint")
 )
 
 func main() {
